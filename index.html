@@ -47,6 +47,7 @@
 
     input[type="file"],
     textarea,
+    input[type="text"],
     button {
       width: 100%;
       font-size: 16px;
@@ -112,7 +113,7 @@
   <div class="logo">
     <img src="https://img2.pic.in.th/pic/logo-ggn.png" alt="โลโก้" style="width: 100%; height: 100%; object-fit: contain;" />
   </div>
-  
+
   <h2>📷 ระบบ Check in / Check out</h2>
 
   <div>
@@ -120,9 +121,10 @@
     <label><input type="radio" name="jobType" value="Check out"> Check out</label>
   </div>
 
-  <input type="file" id="imageInput" accept="image/jpeg,image/png" multiple />
+  <input type="text" id="fullname" placeholder="ชื่อ-นามสกุล" />
   <textarea id="text" rows="2" placeholder="ข้อความเพิ่มเติม (ถ้ามี)"></textarea>
   <div id="previewText"></div>
+  <input type="file" id="imageInput" accept="image/jpeg,image/png" multiple />
   <button id="sendBtn">ส่งภาพและ Log เข้า Telegram</button>
 
   <div id="previewContainer"></div>
@@ -137,13 +139,13 @@
     const previewContainer = document.getElementById("previewContainer");
     const previewText = document.getElementById("previewText");
     const extraText = document.getElementById("text");
+    const fullname = document.getElementById("fullname");
     const status = document.getElementById("status");
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
 
     let photos = [];
     let processedPhotos = [];
-    let locationStr = "";
 
     function getSelectedJob() {
       const selected = document.querySelector('input[name="jobType"]:checked');
@@ -170,33 +172,17 @@
       });
     }
 
-    function getLocation() {
-      return new Promise((resolve) => {
-        if (!navigator.geolocation) return resolve("");
-        navigator.geolocation.getCurrentPosition(async pos => {
-          const lat = pos.coords.latitude;
-          const lon = pos.coords.longitude;
-          try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=th`);
-            const data = await res.json();
-            locationStr = data.display_name || `${lat.toFixed(6)},${lon.toFixed(6)}`;
-          } catch {
-            locationStr = `${lat.toFixed(6)},${lon.toFixed(6)}`;
-          }
-          updatePreviewText();
-          resolve();
-        }, () => resolve());
-      });
-    }
-
     function updatePreviewText() {
       const job = getSelectedJob() || "-";
       const extra = extraText.value.trim();
+      const name = fullname.value.trim() || "-";
       const nowStr = new Date().toLocaleString("th-TH");
-      previewText.textContent = `📅 ${nowStr}\n📍 ${locationStr}\n📌 งาน: ${job}${extra ? `\n📝 ${extra}` : ""}`;
+      previewText.textContent =
+        `📅 ${nowStr}\n👤 ชื่อ: ${name}\n📌 งาน: ${job}${extra ? `\n📝 ${extra}` : ""}`;
     }
 
     extraText.addEventListener("input", updatePreviewText);
+    fullname.addEventListener("input", updatePreviewText);
     document.querySelectorAll('input[name="jobType"]').forEach(el => {
       el.addEventListener("change", updatePreviewText);
     });
@@ -219,13 +205,11 @@
       if (photos.length === 0) return alert("กรุณาเลือกรูปภาพ");
       if (!getSelectedJob()) return alert("กรุณาเลือกประเภทงาน");
 
-      status.textContent = "📍 กำลังดึงพิกัด...";
-      await getLocation();
-
       const caption = previewText.textContent;
       const nowStr = new Date().toLocaleString("th-TH");
       const job = getSelectedJob();
       const extraMsg = extraText.value.trim();
+      const name = fullname.value.trim() || "-";
 
       processedPhotos = [];
 
@@ -241,13 +225,13 @@
           body: form
         });
 
-        processedPhotos.push({ i: i + 1, nowStr, location: locationStr, job, extraMsg });
+        processedPhotos.push({ i: i + 1, nowStr, name, job, extraMsg });
       }
 
       const wb = XLSX.utils.book_new();
-      const data = [["ลำดับ", "วันเวลา", "สถานที่", "ประเภทงาน", "ข้อความ"]];
+      const data = [["ลำดับ", "วันเวลา", "ชื่อ", "ประเภทงาน", "ข้อความ"]];
       processedPhotos.forEach(p =>
-        data.push([p.i, p.nowStr, p.location, p.job, p.extraMsg])
+        data.push([p.i, p.nowStr, p.name, p.job, p.extraMsg])
       );
       const ws = XLSX.utils.aoa_to_sheet(data);
       XLSX.utils.book_append_sheet(wb, ws, "Log");
@@ -268,6 +252,7 @@
       updatePreview();
       previewText.textContent = "";
       extraText.value = "";
+      fullname.value = "";
       document.querySelectorAll('input[name="jobType"]').forEach(el => el.checked = false);
     }
 
