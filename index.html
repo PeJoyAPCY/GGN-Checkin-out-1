@@ -1,76 +1,9 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>GGN PATROL SYSTEM</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<style>
-  body {
-    font-family: "Segoe UI", Tahoma, sans-serif;
-    max-width: 480px;
-    margin: auto;
-    padding: 15px;
-    background: #f0f0f5;
-  }
-  h2 {
-    text-align: center;
-  }
-  select, input[type="file"], textarea, button {
-    width: 100%;
-    margin-bottom: 10px;
-    font-size: 16px;
-    padding: 8px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-  }
-  #previewContainer {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-  }
-  #previewContainer img {
-    width: 120px;
-    height: 160px;
-    object-fit: cover;
-    border: 2px solid #444;
-    border-radius: 6px;
-  }
-  button {
-    background-color: #004080;
-    color: white;
-    font-size: 18px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-  button:hover {
-    background-color: #0066cc;
-  }
-  #previewText {
-    background: #fff;
-    border: 1px solid #ccc;
-    padding: 10px;
-    white-space: pre-wrap;
-    font-size: 15px;
-  }
-  canvas {
-    display: none;
-  }
-</style>
-</head>
-<body>
+<h2>📷 ระบบ Check in / Check out</h2>
 
-<h2>📷 ระบบถ่ายภาพ + ส่ง Log เข้า Telegram</h2>
-
-<select id="jobType">
-  <option value="">-- เลือกประเภทงาน --</option>
-  <option value="จุดตรวจ">จุดตรวจ</option>
-  <option value="รายงาน">รายงาน</option>
-  <option value="Checkin">Check in</option>
-  <option value="Checkout">Check out</option>
-</select>
+<div>
+  <label><input type="radio" name="jobType" value="Check in"> Check in</label>
+  <label><input type="radio" name="jobType" value="Check out"> Check out</label>
+</div>
 
 <input type="file" id="imageInput" accept="image/jpeg,image/png" multiple />
 <textarea id="text" rows="2" placeholder="ข้อความเพิ่มเติม (ถ้ามี)"></textarea>
@@ -85,7 +18,6 @@
   const botToken = "8192684646:AAFU_kYwTM6_tG0VshfamEdyCqFxSr45OPk";
   const chatId = "-4802946167";
 
-  const jobType = document.getElementById("jobType");
   const imageInput = document.getElementById("imageInput");
   const previewContainer = document.getElementById("previewContainer");
   const previewText = document.getElementById("previewText");
@@ -97,6 +29,11 @@
   let photos = [];
   let processedPhotos = [];
   let locationStr = "";
+
+  function getSelectedJob() {
+    const selected = document.querySelector('input[name="jobType"]:checked');
+    return selected ? selected.value : "";
+  }
 
   imageInput.addEventListener("change", (e) => {
     photos = Array.from(e.target.files).filter(file => {
@@ -138,14 +75,16 @@
   }
 
   function updatePreviewText() {
-    const job = jobType.value || "-";
+    const job = getSelectedJob() || "-";
     const extra = extraText.value.trim();
     const nowStr = new Date().toLocaleString("th-TH");
     previewText.textContent = `📅 ${nowStr}\n📍 ${locationStr}\n📌 งาน: ${job}${extra ? `\n📝 ${extra}` : ""}`;
   }
 
   extraText.addEventListener("input", updatePreviewText);
-  jobType.addEventListener("change", updatePreviewText);
+  document.querySelectorAll('input[name="jobType"]').forEach(el => {
+    el.addEventListener("change", updatePreviewText);
+  });
 
   async function processImage(file) {
     return new Promise((resolve) => {
@@ -163,12 +102,14 @@
 
   async function sendToTelegram() {
     if (photos.length === 0) return alert("กรุณาเลือกรูปภาพ");
+    if (!getSelectedJob()) return alert("กรุณาเลือกประเภทงาน");
+
     status.textContent = "📍 กำลังดึงพิกัด...";
     await getLocation();
 
     const caption = previewText.textContent;
     const nowStr = new Date().toLocaleString("th-TH");
-    const job = jobType.value || "-";
+    const job = getSelectedJob();
     const extraMsg = extraText.value.trim();
 
     processedPhotos = [];
@@ -212,10 +153,8 @@
     updatePreview();
     previewText.textContent = "";
     extraText.value = "";
+    document.querySelectorAll('input[name="jobType"]').forEach(el => el.checked = false);
   }
 
   document.getElementById("sendBtn").addEventListener("click", sendToTelegram);
 </script>
-
-</body>
-</html>
