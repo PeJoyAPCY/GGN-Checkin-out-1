@@ -14,10 +14,13 @@
       background-color: #fdf5f7;
       color: #400000;
     }
+
     h2 {
       text-align: center;
       color: #800000;
+      margin-bottom: 15px;
     }
+
     .logo {
       width: 80px;
       height: 80px;
@@ -28,20 +31,23 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      font-weight: bold;
+      font-size: 14px;
+      color: #555;
     }
-    .logo img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
+
     label {
-      margin-right: 10px;
+      margin-right: 15px;
       font-weight: bold;
     }
-    input[type="radio"],
-    input[type="text"],
+
+    input[type="radio"] {
+      margin-right: 5px;
+    }
+
     input[type="file"],
     textarea,
+    input[type="text"],
     button {
       width: 100%;
       font-size: 16px;
@@ -51,16 +57,20 @@
       border: 1px solid #ccc;
       box-sizing: border-box;
     }
+
     button {
       background-color: #800000;
       color: white;
       border: none;
       font-weight: bold;
       cursor: pointer;
+      transition: background-color 0.3s;
     }
+
     button:hover {
       background-color: #a00000;
     }
+
     #previewText {
       background: #fff5f5;
       border: 1px solid #d9b3b3;
@@ -69,6 +79,7 @@
       font-size: 15px;
       margin-top: 10px;
     }
+
     #previewContainer {
       display: flex;
       flex-wrap: wrap;
@@ -76,6 +87,7 @@
       justify-content: center;
       margin-top: 10px;
     }
+
     #previewContainer img {
       width: 120px;
       height: 160px;
@@ -83,24 +95,25 @@
       border: 2px solid #800000;
       border-radius: 6px;
     }
+
     #status {
       margin-top: 10px;
       font-weight: bold;
       text-align: center;
       color: #800000;
     }
-    video {
+
+    canvas {
       display: none;
-      width: 100%;
-      margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
   <div class="logo">
-    <img src="https://img2.pic.in.th/pic/logo-ggn.png" alt="โลโก้">
+    <img src="https://img2.pic.in.th/pic/logo-ggn.png" alt="โลโก้" style="width: 100%; height: 100%; object-fit: contain;" />
   </div>
+
   <h2>📷 ระบบ Check in / Check out</h2>
 
   <div>
@@ -108,17 +121,15 @@
     <label><input type="radio" name="jobType" value="Check out"> Check out</label>
   </div>
 
-  <input type="text" id="fullname" placeholder="ชื่อ - นามสกุล" />
-  <input type="file" id="imageInput" accept="image/jpeg,image/png" multiple />
-  <button id="openCameraBtn">📸 เปิดกล้อง</button>
-  <video id="camera" autoplay playsinline></video>
-  <button id="captureBtn">📷 ถ่ายภาพ</button>
+  <input type="text" id="fullname" placeholder="ชื่อ-นามสกุล" />
   <textarea id="text" rows="2" placeholder="ข้อความเพิ่มเติม (ถ้ามี)"></textarea>
   <div id="previewText"></div>
+  <input type="file" id="imageInput" accept="image/jpeg,image/png" multiple />
   <button id="sendBtn">ส่งภาพและ Log เข้า Telegram</button>
+
   <div id="previewContainer"></div>
   <div id="status"></div>
-  <canvas id="canvas" style="display:none;"></canvas>
+  <canvas id="canvas"></canvas>
 
   <script>
     const botToken = "8192684646:AAFU_kYwTM6_tG0VshfamEdyCqFxSr45OPk";
@@ -128,14 +139,10 @@
     const previewContainer = document.getElementById("previewContainer");
     const previewText = document.getElementById("previewText");
     const extraText = document.getElementById("text");
-    const fullnameInput = document.getElementById("fullname");
+    const fullname = document.getElementById("fullname");
     const status = document.getElementById("status");
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
-
-    const openCameraBtn = document.getElementById("openCameraBtn");
-    const captureBtn = document.getElementById("captureBtn");
-    const camera = document.getElementById("camera");
 
     let photos = [];
     let processedPhotos = [];
@@ -143,14 +150,6 @@
     function getSelectedJob() {
       const selected = document.querySelector('input[name="jobType"]:checked');
       return selected ? selected.value : "";
-    }
-
-    function updatePreviewText() {
-      const job = getSelectedJob() || "-";
-      const extra = extraText.value.trim();
-      const name = fullnameInput.value.trim() || "-";
-      const nowStr = new Date().toLocaleString("th-TH");
-      previewText.textContent = `📅 ${nowStr}\n👤 ${name}\n📌 งาน: ${job}${extra ? `\n📝 ${extra}` : ""}`;
     }
 
     imageInput.addEventListener("change", (e) => {
@@ -171,40 +170,21 @@
         img.src = URL.createObjectURL(file);
         previewContainer.appendChild(img);
       });
-      updatePreviewText();
     }
 
-    document.querySelectorAll('input[name="jobType"]').forEach(el =>
-      el.addEventListener("change", updatePreviewText)
-    );
+    function updatePreviewText() {
+      const job = getSelectedJob() || "-";
+      const extra = extraText.value.trim();
+      const name = fullname.value.trim() || "-";
+      const nowStr = new Date().toLocaleString("th-TH");
+      previewText.textContent =
+        `📅 ${nowStr}\n👤 ชื่อ: ${name}\n📌 งาน: ${job}${extra ? `\n📝 ${extra}` : ""}`;
+    }
+
     extraText.addEventListener("input", updatePreviewText);
-    fullnameInput.addEventListener("input", updatePreviewText);
-
-    // Camera
-    let cameraStream;
-    openCameraBtn.addEventListener("click", async () => {
-      try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        camera.srcObject = cameraStream;
-        camera.style.display = "block";
-        captureBtn.style.display = "block";
-      } catch (err) {
-        alert("ไม่สามารถเข้ากล้องได้");
-      }
-    });
-
-    captureBtn.addEventListener("click", () => {
-      canvas.width = camera.videoWidth;
-      canvas.height = camera.videoHeight;
-      ctx.drawImage(camera, 0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "white";
-      ctx.font = "36px sans-serif";
-      ctx.fillText(new Date().toLocaleString("th-TH"), 20, canvas.height - 40);
-      canvas.toBlob(blob => {
-        const file = new File([blob], `camera_${Date.now()}.jpg`, { type: "image/jpeg" });
-        photos.push(file);
-        updatePreview();
-      }, "image/jpeg", 0.95);
+    fullname.addEventListener("input", updatePreviewText);
+    document.querySelectorAll('input[name="jobType"]').forEach(el => {
+      el.addEventListener("change", updatePreviewText);
     });
 
     async function processImage(file) {
@@ -222,17 +202,14 @@
     }
 
     async function sendToTelegram() {
-      if (photos.length === 0) return alert("กรุณาเลือกรูปภาพหรือถ่ายภาพ");
+      if (photos.length === 0) return alert("กรุณาเลือกรูปภาพ");
       if (!getSelectedJob()) return alert("กรุณาเลือกประเภทงาน");
-      if (!fullnameInput.value.trim()) return alert("กรุณาระบุชื่อ - นามสกุล");
 
-      const name = fullnameInput.value.trim();
+      const caption = previewText.textContent;
+      const nowStr = new Date().toLocaleString("th-TH");
       const job = getSelectedJob();
       const extraMsg = extraText.value.trim();
-      const nowStr = new Date().toLocaleString("th-TH");
-      const caption = previewText.textContent;
-
-      status.textContent = "📤 กำลังส่งข้อมูล...";
+      const name = fullname.value.trim() || "-";
 
       processedPhotos = [];
 
@@ -242,10 +219,12 @@
         form.append("chat_id", chatId);
         form.append("photo", blob, `photo${i + 1}.jpg`);
         form.append("caption", caption);
+
         await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
           method: "POST",
           body: form
         });
+
         processedPhotos.push({ i: i + 1, nowStr, name, job, extraMsg });
       }
 
@@ -273,7 +252,7 @@
       updatePreview();
       previewText.textContent = "";
       extraText.value = "";
-      fullnameInput.value = "";
+      fullname.value = "";
       document.querySelectorAll('input[name="jobType"]').forEach(el => el.checked = false);
     }
 
