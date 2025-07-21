@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GGN Check-in/Check-out</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.3/dist/heic2any.min.js"></script>
   <style>
     body {
       font-family: "Segoe UI", Tahoma, sans-serif;
@@ -125,7 +124,7 @@
   <input type="text" id="fullname" placeholder="ชื่อ-นามสกุล" />
   <textarea id="text" rows="2" placeholder="ข้อความเพิ่มเติม (ถ้ามี)"></textarea>
   <div id="previewText"></div>
-  <input type="file" id="imageInput" accept="image/jpeg,image/png,image/heic,.heic" multiple />
+  <input type="file" id="imageInput" accept="image/jpeg,image/png" multiple />
   <button id="sendBtn">ส่งภาพและ Log เข้า Telegram</button>
 
   <div id="previewContainer"></div>
@@ -153,31 +152,14 @@
       return selected ? selected.value : "";
     }
 
-    imageInput.addEventListener("change", async (e) => {
-      const fileArray = Array.from(e.target.files);
-      photos = [];
-
-      for (const file of fileArray) {
+    imageInput.addEventListener("change", (e) => {
+      photos = Array.from(e.target.files).filter(file => {
         if (file.type === "image/heic" || file.name.endsWith(".heic")) {
-          try {
-            const converted = await heic2any({
-              blob: file,
-              toType: "image/jpeg",
-              quality: 0.9
-            });
-            const blob = Array.isArray(converted) ? converted[0] : converted;
-            const newFile = new File([blob], file.name.replace(/\.heic$/, ".jpg"), {
-              type: "image/jpeg"
-            });
-            photos.push(newFile);
-          } catch (err) {
-            alert("เกิดข้อผิดพลาดในการแปลง HEIC: " + err.message);
-          }
-        } else {
-          photos.push(file);
+          alert("ไม่รองรับไฟล์ .heic กรุณาใช้ .jpg หรือ .png");
+          return false;
         }
-      }
-
+        return true;
+      });
       updatePreview();
     });
 
